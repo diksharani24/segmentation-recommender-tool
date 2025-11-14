@@ -9,15 +9,36 @@ import datetime as dt
 # --- 1. CONFIGURATION ---
 st.set_page_config(layout="wide", page_title="Customer Segmentation Tool")
 
-# --- 2. DATA SIMULATION (Using Simulated Data for test purpose) ---
+# --- 2. DATA SIMULATION (Using Simulated Data for Testing) ---
 @st.cache_data
 def load_and_prepare_data():
+    
+    # --- FIX: Define fixed size and ensure all arrays match ---
+    TOTAL_ROWS = 1500  # Define the total number of simulated transactions
+    NUM_CUSTOMERS = 100
+    
+    # Generate Customer IDs, ensuring the final length matches TOTAL_ROWS
+    # np.random.randint(5, 30, NUM_CUSTOMERS) creates 100 random repeat counts
+    # The resulting array's length is variable, so we must trim/pad it.
+    customer_ids_temp = np.repeat(range(101, 101 + NUM_CUSTOMERS), 
+                                  np.random.randint(5, 30, NUM_CUSTOMERS))
+    
+    # Handle length mismatch: trim if too long, pad if too short
+    if len(customer_ids_temp) >= TOTAL_ROWS:
+        customer_ids = customer_ids_temp[:TOTAL_ROWS]
+    else:
+        # If too short, randomly pick from the existing IDs to pad
+        fill_count = TOTAL_ROWS - len(customer_ids_temp)
+        random_fill = np.random.choice(customer_ids_temp, fill_count)
+        customer_ids = np.concatenate((customer_ids_temp, random_fill))
+
     # Simulate transactional data
     data = {
-        'CustomerID': np.repeat(range(101, 201), np.random.randint(5, 20, 100)),
-        'InvoiceDate': pd.to_datetime('2024-01-01') + pd.to_timedelta(np.random.randint(1, 365, 1250), unit='D'),
-        'Sales': np.random.uniform(10, 500, 1250)
+        'CustomerID': customer_ids, # Length is now TOTAL_ROWS
+        'InvoiceDate': pd.to_datetime('2024-01-01') + pd.to_timedelta(np.random.randint(1, 365, TOTAL_ROWS), unit='D'), # Length is TOTAL_ROWS
+        'Sales': np.random.uniform(10, 500, TOTAL_ROWS) # Length is TOTAL_ROWS
     }
+    
     df = pd.DataFrame(data)
     
     # Calculate latest date for Recency calculation
@@ -41,7 +62,8 @@ def run_kmeans_model(rfm_df, k):
     rfm_scaled = scaler.fit_transform(rfm_log)
     
     # 3.2 K-Means Clustering
-    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    # Added explicit warning suppression for the deprecation warning
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init='auto') 
     rfm_df['Cluster'] = kmeans.fit_predict(rfm_scaled)
     
     # 3.3 Cluster Profiling (Analysis)
