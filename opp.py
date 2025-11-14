@@ -9,7 +9,7 @@ import datetime as dt
 # --- 1. CONFIGURATION ---
 st.set_page_config(layout="wide", page_title="Customer Segmentation Tool")
 
-# --- 2. DATA SIMULATION (Using Simulated Data for Testing) ---
+# --- 2. DATA SIMULATION (REPLACE with actual data loading) ---
 @st.cache_data
 def load_and_prepare_data():
     
@@ -18,8 +18,6 @@ def load_and_prepare_data():
     NUM_CUSTOMERS = 100
     
     # Generate Customer IDs, ensuring the final length matches TOTAL_ROWS
-    # np.random.randint(5, 30, NUM_CUSTOMERS) creates 100 random repeat counts
-    # The resulting array's length is variable, so we must trim/pad it.
     customer_ids_temp = np.repeat(range(101, 101 + NUM_CUSTOMERS), 
                                   np.random.randint(5, 30, NUM_CUSTOMERS))
     
@@ -35,8 +33,8 @@ def load_and_prepare_data():
     # Simulate transactional data
     data = {
         'CustomerID': customer_ids, # Length is now TOTAL_ROWS
-        'InvoiceDate': pd.to_datetime('2024-01-01') + pd.to_timedelta(np.random.randint(1, 365, TOTAL_ROWS), unit='D'), # Length is TOTAL_ROWS
-        'Sales': np.random.uniform(10, 500, TOTAL_ROWS) # Length is TOTAL_ROWS
+        'InvoiceDate': pd.to_datetime('2024-01-01') + pd.to_timedelta(np.random.randint(1, 365, TOTAL_ROWS), unit='D'),
+        'Sales': np.random.uniform(10, 500, TOTAL_ROWS)
     }
     
     df = pd.DataFrame(data)
@@ -62,7 +60,7 @@ def run_kmeans_model(rfm_df, k):
     rfm_scaled = scaler.fit_transform(rfm_log)
     
     # 3.2 K-Means Clustering
-    # Added explicit warning suppression for the deprecation warning
+    # Using 'auto' for n_init to suppress the deprecation warning
     kmeans = KMeans(n_clusters=k, random_state=42, n_init='auto') 
     rfm_df['Cluster'] = kmeans.fit_predict(rfm_scaled)
     
@@ -101,6 +99,16 @@ profiles.columns = ['Count', 'Avg. Recency (Days)', 'Avg. Frequency (Txns)', 'Av
 
 st.dataframe(profiles.style.highlight_max(axis=0), use_container_width=True)
 
+
+# -------------------------------------------------------------
+# FIX: Dynamically determine the Champion Segment ID
+# Champions are the segment with high M (top of the sorted profiles) and low R (most recent).
+top_monetary_segments = profiles.head(3)
+# Find the ID among the top monetary segments that has the LOWEST Recency
+champion_id = top_monetary_segments['Avg. Recency (Days)'].idxmin()
+
+# -------------------------------------------------------------
+
 st.markdown("""
 <style>
 .low-r { color: green; font-weight: bold; }
@@ -109,8 +117,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 with st.expander("Interpretation Guide"):
-    st.markdown("""
-    - **Champions:** Usually **low** Avg. Recency (bought recently), **high** Avg. Frequency and Monetary. **(Segment ID 0 in this run)**
+    st.markdown(f"""
+    - **Champions:** Usually **low** Avg. Recency (bought recently), **high** Avg. Frequency and Monetary. **(Segment ID {champion_id} in this run)**
     - **At Risk:** High Avg. Recency (long time since last purchase), but decent Avg. Frequency and Monetary.
     - **New Customers:** Low Avg. Recency, but low F & M.
     """)
