@@ -9,7 +9,7 @@ import datetime as dt
 # --- 1. CONFIGURATION ---
 st.set_page_config(layout="wide", page_title="Customer Segmentation Tool")
 
-# --- 2. DATA SIMULATION (REPLACE with actual data loading) ---
+# --- 2. DATA SIMULATION (Using Simulated Data for test purpose) ---
 @st.cache_data
 def load_and_prepare_data():
     # Simulate transactional data
